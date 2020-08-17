@@ -7,6 +7,7 @@ import numpy as np
 
 def plot_ocr(filteredbooks: str,
              readtext: Callable[[str], str],
+             path: bool = False,
              blur: bool = False,
              morph: bool = False,
              gray: bool = False,
@@ -15,18 +16,19 @@ def plot_ocr(filteredbooks: str,
     col, row = 0, 0
     for index in range(24):
         # read image
-        image = cv2.imread(os.path.join(filteredbooks, f'{row}_{col}.jpg'))
+        img_path = os.path.join(filteredbooks, f'{row}_{col}.jpg')
+        image = cv2.imread(img_path)
         # pre-process
-        if blur:
+        if blur and not path:
             image = cv2.GaussianBlur(image, (3, 3), 0)
         if morph:
             image = cv2.morphologyEx(image,
                                      cv2.MORPH_OPEN,
                                      np.ones((3, 3), np.uint8)
                                      )
-        if gray:
+        if gray and not path:
             image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        if deskew:
+        if deskew and not path:
             temp = np.asarray(image)
             image = deskew_image(temp)
 
@@ -36,11 +38,19 @@ def plot_ocr(filteredbooks: str,
         plt.axis('off')
 
         # OCR text extraction
-        output = readtext(image)
-        data = ''
-        for _, val in enumerate(output):
-            data += val[1]+' '
-        axes[row, col].set_title(data)
+        if path:
+            output = readtext(img_path)
+            data = ''
+            for _, val in enumerate(output):
+                data += val+' '
+            axes[row, col].set_title(data)
+
+        else:
+            output = readtext(image)
+            data = ''
+            for _, val in enumerate(output):
+                data += val[1]+' '
+            axes[row, col].set_title(data)
 
         # column/row logic for sub-plots
         if col == 2:
