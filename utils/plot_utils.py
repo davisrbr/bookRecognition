@@ -145,13 +145,7 @@ def drawBoxes(
         thickness: The thickness for each box.
         boxes_format: The format used for providing the boxes. Options are
             "boxes" which indicates an array with shape(N, 4, 2) where N is the
-            number of boxes and each box is a list of four points) as provided
-            by `keras_ocr.detection.Detector.detect`, "lines" (a list of
-            lines where each line itself is a list of (box, character) tuples)
-            as provided by `keras_ocr.data_generation.get_image_generator`,
-            or "predictions" where boxes is by itself a list of (word, box)
-            tuples as provided by `keras_ocr.pipeline.Pipeline.recognize` or
-            `keras_ocr.recognition.Recognizer.recognize_from_boxes`.
+            number of boxes and each box is a list of four points)
     """
     if len(boxes) == 0:
         return image
