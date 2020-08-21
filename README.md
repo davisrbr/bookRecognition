@@ -9,3 +9,4 @@ For now, this project is composed of
 
 1. [An initial attempt with traditional computer vision.](https://github.com/davisrbr/bookRecognition/blob/master/notebooks/Traditional_Image_Processing.ipynb)
 2. [Experimenting with some optical character recognition systems.](https://github.com/davisrbr/bookRecognition/blob/master/notebooks/OCR_simple.ipynb)
+3. [Book detection with PyTorch](https://github.com/davisrbr/bookRecognition/blob/master/notebooks/PyTorch_Detection.ipynb)
