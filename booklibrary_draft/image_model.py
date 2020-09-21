@@ -1,10 +1,11 @@
-from typing import Callable, Dict, List
+from typing import Callable, Dict, List, Tuple
 import numpy as np
 import torchvision
 from torchvision import transforms
 import torch
 from pathlib import Path
 from PIL import Image
+import cv2
 # from itertools import combinations
 
 
@@ -77,3 +78,39 @@ def process_image(
     tensor = process(img)
     tensor_unsqueezed = tensor.unsqueeze(0)
     return tensor_unsqueezed
+
+
+def deskew(image_rgb: np.ndarray) -> np.ndarray:
+    '''Attempts to deskew an rgb np.ndarray image.
+     A part of a few methods to transform an image of a book to improve OCR.
+     I found that OpenCV's warpAffine was much faster than scikit-image's.
+
+     9.85 ms ± 391 µs per loop (mean ± std. dev. of 7 runs, 100 loops each)'''
+    if not image_rgb.ndim == 3:
+        raise TypeError(
+                "the deskew transformation should be performed on " +
+                "numpy rgb images of books"
+                )
+
+    image_grey = cv2.cvtColor(image_rgb, cv2.COLOR_BGR2GRAY)
+    coords = np.column_stack(np.where(image_grey > 0))
+    angle = cv2.minAreaRect(coords)[-1]
+    if angle < -45:
+        angle = -(90 + angle)
+    else:
+        angle = -angle
+    (h, w) = image_grey.shape[:2]
+    center = (w // 2, h // 2)
+    matrix = cv2.getRotationMatrix2D(center, angle, 1.0)
+    rotated = cv2.warpAffine(
+            image_rgb,
+            matrix,
+            (w, h),
+            flags=cv2.INTER_CUBIC,
+            borderMode=cv2.BORDER_REPLICATE
+            )
+    return rotated
+
+
+def propose_rotations(image_rgb: np.ndarray) -> Tuple[np.ndarray, int]:
+    pass

@@ -149,8 +149,9 @@ def generate_title_possibilities(word_list: List[str]) -> List[List[str]]:
         (where we use that most authors have 1 or 2 names on book cover)
         the remaining generated titles may exhaustively do unordered
         samples without replacement.
-        note: all attempts use a minimum of three words.
-        other note: this schema works a lot better when words are
+
+        Note: all attempts use a minimum of three words.
+        Other note: this schema works a lot better when words are
                     reasonably ordered.'''
     # word_list = title_words.split(' ')
     if len(word_list) <= 2:
@@ -182,3 +183,11 @@ def title_metric(title_proposal: List[str]) -> bool:
     # this heuristic is a best guess, should check empirically
     second_condition = len(word_lengths) > 3 and max(word_lengths) > 4
     return first_condition or second_condition
+
+
+def books_from_proposed(books: List[np.ndarray]) -> str:
+    '''Orchestrates taking books from the image model,
+       cleaning and generating title possibilities, and
+       searching for them.'''
+    proposed_titles: List[List[str]] = text_model_inference(books)
+    return proposed_titles
