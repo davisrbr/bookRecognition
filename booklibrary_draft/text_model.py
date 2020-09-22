@@ -8,6 +8,8 @@ import pkg_resources
 import urllib.request
 import json
 from tqdm import tqdm
+from collections import defaultdict
+from image_model import rotate90
 # from itertools import combinations
 
 
@@ -177,17 +179,60 @@ def title_metric(title_proposal: List[str]) -> bool:
     '''Simple metric to indicate if a proposed title
         is valid or worth searching.'''
     word_lengths = [len(word) for word in title_proposal]
-    # this will fail on these books, author search will be necessary
+    # this will fail on these books, so author NER is necessary
     # https://www.abebooks.com/books/single-letter-title-shortest-mccarthy/warhol-updike.shtml
-    first_condition = max(word_lengths) > 3
+    try:
+        first_condition = max(word_lengths) > 3
+    except ValueError:
+        # word_lngths empty list
+        return False
     # this heuristic is a best guess, should check empirically
     second_condition = len(word_lengths) > 3 and max(word_lengths) > 4
     return first_condition or second_condition
 
 
+def title_metric_compare(title_proposal: List[str]) -> int:
+    '''Comparitive metric to indicate the strength of a
+        proposed title.'''
+    word_lengths = [len(word) for word in title_proposal]
+    try:
+        metric = max(word_lengths) * len(word_lengths)
+    except ValueError:
+        metric = len(word_lengths)
+    return metric
+
+
 def books_from_proposed(books: List[np.ndarray]) -> str:
-    '''Orchestrates taking books from the image model,
+    '''Orchestrates taking books (produced by the image model),
        cleaning and generating title possibilities, and
        searching for them.'''
+    # assuming books have been pre-processed, e.g. deskewed
     proposed_titles: List[List[str]] = text_model_inference(books)
-    return proposed_titles
+
+    # perform initial title clean
+    cleaned_titles: List[List[str]] = clean_proposals(proposed_titles)
+
+    title_scores = defaultdict(lambda x: (0, 0))
+    for index, title in enumerate(cleaned_titles):
+        if title_metric(title):
+            title_scores[index] = title_metric_compare(title)
+            # check goodness of title and number of rotations already performed
+            while title_scores[index][0] < 30 and title_scores[index][1] < 3:
+                rotated_book, rotation = rotate90(
+                        books[index], title_scores[index][2]
+                        )
+                # test new rotation
+                rotated_title: List[List[str]] = text_model_inference(
+                        [rotated_book]
+                        )
+                cleaned_rotated: List[str] = clean_proposals(
+                        rotated_title
+                        )[0]
+                new_metric = title_metric_compare(cleaned_rotated)
+                # check improvement, update title/metric if improved
+                if new_metric > title_scores[index][0]:
+                    cleaned_titles[index] = cleaned_rotated
+                    title_scores[index][0] = new_metric
+                title_scores[index][1] = rotation
+
+    return cleaned_titles
