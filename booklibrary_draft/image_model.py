@@ -13,7 +13,7 @@ def image_model_pytorch(
         img_path: Path,
         model_str: str = 'resnet50',
         threshold: float = 0.8,
-        book_limit: int = 2,
+        book_limit: int = 15,
         ) -> List[np.ndarray]:
     '''Accepts an image path and returns
         np.ndarary images of books, using
@@ -113,10 +113,10 @@ def deskew(image_rgb: np.ndarray) -> np.ndarray:
 
 
 def rotate90(
-        image_rot: Tuple[np.ndarray, int]
+        image_rgb: np.ndarray,
+        rotations: int
         ) -> Tuple[np.ndarray, int]:
     '''Rotates an image by 90 degrees, given a tuple of the image and
         an integer number of previously performed rotations.'''
-    image_rgb, rotations = image_rot
     rotated_img = np.rot90(image_rgb, rotations + 1)
     return (rotated_img, rotations + 1)
