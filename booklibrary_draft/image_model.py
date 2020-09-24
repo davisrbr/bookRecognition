@@ -120,3 +120,26 @@ def rotate90(
         an integer number of previously performed rotations.'''
     rotated_img = np.rot90(image_rgb, rotations + 1)
     return (rotated_img, rotations + 1)
+
+
+def screen_books(bookshelf: List[np.ndarray]) -> List[np.ndarray]:
+    '''Screens objects that are unlikely to be books to save time.
+        For first implementation, it (minimally) removes
+        the images that are too large.
+        Could make it resample for the text model as well.
+        Remember: screen, then deskew'''
+    book_shapes = [book.shape for book in bookshelf]
+    height, width, _ = zip(*book_shapes)
+    w_mean = sum(width) / len(width)
+    h_mean = sum(height) / len(height)
+    w_var = sum((i - w_mean) ** 2 for i in width) / len(width)
+    h_var = sum((i - h_mean) ** 2 for i in height) / len(height)
+
+    # as a rough first pass, assume normally distributed and keep w/n 95%
+    w_factor = w_mean + np.sqrt(w_var) * 2
+    h_factor = h_mean + np.sqrt(h_var) * 2
+
+    screened = [book for index, book in enumerate(bookshelf)
+                if height[index] < h_factor and width[index] < w_factor]
+
+    return screened, w_factor, h_factor

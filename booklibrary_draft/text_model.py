@@ -6,7 +6,7 @@ import keras_ocr
 import tensorflow as tf
 from symspellpy import SymSpell, Verbosity, symspellpy
 import pkg_resources
-from image_model import rotate90
+from image_model import rotate90, screen_books
 
 import logging
 import urllib.request
@@ -43,7 +43,8 @@ def text_model_inference(
                 "a list of np.ndarray images of books"
                 )
     try:
-        print('Performing text prediction on books')
+        if len(books) > 1:
+            print('Performing text prediction on books')
         predictions = []
         for _, book in enumerate(tqdm(books, disable=len(books) == 1)):
             predictions.append(model([book])[0])
@@ -53,7 +54,6 @@ def text_model_inference(
     try:
         proposals = prioritize_position(predictions)
     except NotImplementedError as e:
-        print(e)
         proposals = [[pred[i][0] for i, _ in enumerate(pred)]
                      for pred in predictions if pred]
     return proposals
@@ -214,8 +214,12 @@ def books_from_proposed(books: List[np.ndarray], display=False) -> List[str]:
     '''Orchestrates taking books (produced by the image model),
        cleaning and generating title possibilities, and
        searching for them.'''
-    # assuming books have been pre-processed, e.g. deskewed
-    proposed_titles: List[List[str]] = text_model_inference(books)
+    # remove things that are not books
+    screened_books, w_factor, h_factor = screen_books(books)
+    print(f'width factor: {w_factor}')
+    print(f'height factor: {h_factor}')
+    # assuming books have been e.g. deskewed
+    proposed_titles: List[List[str]] = text_model_inference(screened_books)
     # perform initial title clean
     cleaned_titles: List[List[str]] = clean_proposals(proposed_titles)
 
@@ -226,17 +230,19 @@ def books_from_proposed(books: List[np.ndarray], display=False) -> List[str]:
             relevant_titles.append(title)
 
             if display:
-                plt.imshow(books[index])
+                print(screened_books[index].shape)
+                plt.imshow(screened_books[index])
                 plt.show()
 
             title_scores[index] = [title_metric_compare(title), 0]
             # check goodness of title and number of rotations already performed
-            while title_scores[index][0] < 50 and title_scores[index][1] < 3:
+            while title_scores[index][0] < 50 or title_scores[index][1] < 3:
                 rotated_book, rotation = rotate90(
-                        books[index], title_scores[index][1]
+                        screened_books[index], title_scores[index][1]
                         )
 
                 if display:
+                    print(screened_books[index].shape)
                     plt.imshow(rotated_book)
                     plt.show()
 
@@ -273,9 +279,11 @@ def books_from_proposed(books: List[np.ndarray], display=False) -> List[str]:
         else:
             alt_titles = generate_title_possibilities(title)
             for _, alt_title in enumerate(alt_titles):
-                format_alt_title = format_words_open_library(alt_title)
-                found_alt_title = get_book_open_library(format_alt_title)
-                if found_alt_title:
-                    found_books.append(found_alt_title)
-                    break
+                # should add a compare to title_metric_compare(alt_title)
+                if title_metric(alt_title):
+                    format_alt_title = format_words_open_library(alt_title)
+                    found_alt_title = get_book_open_library(format_alt_title)
+                    if found_alt_title:
+                        found_books.append(found_alt_title)
+                        break
     return found_books

@@ -1,11 +1,10 @@
 from pathlib import Path
-from text_model import books_from_proposed
 from image_model import image_model_pytorch
 
 
 books = Path('/Users/davisbrown/Desktop/SideProjects/bookRecognition/bookshelfs_unlabelled')
 shelf = books / '0016.jpg'
-proposed_books = image_model_pytorch(shelf, threshold=0.2, book_limit=50)
+proposed_books = image_model_pytorch(shelf, threshold=0.2, book_limit=100)
 found_books = books_from_proposed(proposed_books, display=True)
 # test = ['introduction', 'to', 'algorithms']
 # cleaned_test = clean_proposals([test])[0]
