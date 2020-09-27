@@ -1,5 +1,4 @@
 from typing import List, Tuple, Callable
-from collections import defaultdict
 
 import numpy as np
 import keras_ocr
@@ -14,7 +13,6 @@ import json
 
 from tqdm import tqdm
 import matplotlib.pyplot as plt
-# from itertools import combinations
 
 
 KerasModel = Callable[[np.ndarray], List[List[Tuple[str, np.ndarray]]]]
@@ -53,7 +51,7 @@ def text_model_inference(
         raise RuntimeError(f'Keras OCR model not working: {e}')
     try:
         proposals = prioritize_position(predictions)
-    except NotImplementedError as e:
+    except NotImplementedError:
         proposals = [[pred[i][0] for i, _ in enumerate(pred)]
                      for pred in predictions if pred]
     return proposals
@@ -98,6 +96,8 @@ def spell_correct(
     proposals = [spell_check(word) for word in title_proposal
                  if (len(word) > 1 or word in {'i', 'I', 'a', 'A'})]
     # this is too confusing and I should replace with a list comprehension
+    # corrected_title = [proposal[0]._term for proposal in proposals
+    #                    if proposal is None]
     corrected_title = list(
             map(lambda term: term[0]._term, (filter(None, proposals)))
             )
@@ -133,11 +133,18 @@ def clean_proposals(
 
 def format_words_open_library(words: List[str]) -> str:
     '''Format title words for the open library api'''
-    return 'http://openlibrary.org/search.json?title='+'+'.join(words)
+    try:
+        sight = 'http://openlibrary.org/search.json?title='+'+'.join(words)
+    # likely empty title
+    except TypeError:
+        sight = ''
+    return sight
 
 
 def get_book_open_library(url: str, option: int = 0) -> str:
     '''Retrieve book from the open library api'''
+    if url == '':
+        return ''
     try:
         with urllib.request.urlopen(url) as url:
             data = json.loads(url.read().decode())
@@ -150,7 +157,10 @@ def get_book_open_library(url: str, option: int = 0) -> str:
     return title
 
 
-def generate_title_possibilities(word_list: List[str]) -> List[List[str]]:
+def generate_title_possibilities(
+        word_list: List[str],
+        rolling_combinations: bool = False
+        ) -> List[List[str]]:
     '''generates possible title once a first attempt fails. first generated:
             - remove leading one and two words
             - remove trailing one and two words
@@ -166,10 +176,10 @@ def generate_title_possibilities(word_list: List[str]) -> List[List[str]]:
     if len(word_list) <= 2:
         return word_list
 
-    # look-up is too slow now with the open library api to use combinations
-    # possible = [list(words) for words in combinations(input_words, 3)]
-    # when combinations implemented, can be manually reordered by priority with
-    # possible[-1], possible[1] = possible[1], possible[-1]
+    if rolling_combinations and 6 < len(word_list) < 12:
+        possible1 = [word_list[i:i+5] for i in range(len(word_list)-5)]
+        possible2 = [word_list[i:i+3] for i in range(len(word_list)-3)]
+        return possible1+possible2
 
     # slice first two and last two words, ordered by priority
     possible = [word_list[1:], word_list[:-1],
@@ -210,39 +220,42 @@ def title_metric_compare(title_proposal: List[str]) -> int:
     return metric
 
 
-def books_from_proposed(books: List[np.ndarray], display=False) -> List[str]:
+def books_from_proposed(
+        books: List[np.ndarray],
+        display=False,
+        verbose=False) -> List[str]:
     '''Orchestrates taking books (produced by the image model),
        cleaning and generating title possibilities, and
        searching for them.'''
-    # remove things that are not books
-    screened_books, w_factor, h_factor = screen_books(books)
-    print(f'width factor: {w_factor}')
-    print(f'height factor: {h_factor}')
+    # remove images that likely are not books
+    screened_books: List[np.ndarray] = screen_books(books)
     # assuming books have been e.g. deskewed
     proposed_titles: List[List[str]] = text_model_inference(screened_books)
-    # perform initial title clean
+    # perform initial title clean, assuming in ENGLISH
     cleaned_titles: List[List[str]] = clean_proposals(proposed_titles)
 
-    title_scores = defaultdict(lambda x: [0, 0])
     relevant_titles = []
     for index, title in enumerate(cleaned_titles):
         if title_metric(title):
             relevant_titles.append(title)
+            if verbose:
+                print(f'title: {title}')
 
+            if verbose:
+                print(f'cleaned title: {cleaned_titles[index]}')
             if display:
-                print(screened_books[index].shape)
                 plt.imshow(screened_books[index])
                 plt.show()
 
-            title_scores[index] = [title_metric_compare(title), 0]
+            title_score = title_metric_compare(title)
+            rotation = 0
             # check goodness of title and number of rotations already performed
-            while title_scores[index][0] < 50 or title_scores[index][1] < 3:
+            while title_score < 50 and rotation < 3:
                 rotated_book, rotation = rotate90(
-                        screened_books[index], title_scores[index][1]
+                        screened_books[index], rotation
                         )
 
                 if display:
-                    print(screened_books[index].shape)
                     plt.imshow(rotated_book)
                     plt.show()
 
@@ -252,13 +265,14 @@ def books_from_proposed(books: List[np.ndarray], display=False) -> List[str]:
                         )
                 cleaned_rotated: List[str] = clean_proposals(
                         rotated_title
-                        )
+                        )[0]
+                if verbose:
+                    print(f'cleaned rotated title: {cleaned_rotated}')
                 new_metric = title_metric_compare(cleaned_rotated)
                 # check improvement, update title/metric if improved
-                if new_metric > title_scores[index][0]:
-                    relevant_titles[index] = cleaned_rotated
-                    title_scores[index][0] = new_metric
-                title_scores[index][1] = rotation
+                if new_metric > title_score:
+                    relevant_titles.append(cleaned_rotated)
+                    title_score = new_metric
         else:
             relevant_titles.append([])
 
@@ -266,6 +280,7 @@ def books_from_proposed(books: List[np.ndarray], display=False) -> List[str]:
     print('Pulling from open library api:')
     found_books = []
     for _, title in enumerate(tqdm(relevant_titles)):
+        print(title)
         # make a first try
         if title:
             format_title = format_words_open_library(title)
@@ -277,6 +292,7 @@ def books_from_proposed(books: List[np.ndarray], display=False) -> List[str]:
             found_books.append(found_title)
         # otherwise generate new possibilities
         else:
+            print(f'alt title for: {title}')
             alt_titles = generate_title_possibilities(title)
             for _, alt_title in enumerate(alt_titles):
                 # should add a compare to title_metric_compare(alt_title)

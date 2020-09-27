@@ -3,9 +3,9 @@ from image_model import image_model_pytorch
 
 
 books = Path('/Users/davisbrown/Desktop/SideProjects/bookRecognition/bookshelfs_unlabelled')
-shelf = books / '0016.jpg'
+shelf = books / 'mybookshelf.png'
 proposed_books = image_model_pytorch(shelf, threshold=0.2, book_limit=100)
-found_books = books_from_proposed(proposed_books, display=True)
+found_books = books_from_proposed(proposed_books, display=False, verbose=False)
 # test = ['introduction', 'to', 'algorithms']
 # cleaned_test = clean_proposals([test])[0]
 # print(cleaned_test)

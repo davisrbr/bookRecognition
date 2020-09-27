@@ -142,4 +142,4 @@ def screen_books(bookshelf: List[np.ndarray]) -> List[np.ndarray]:
     screened = [book for index, book in enumerate(bookshelf)
                 if height[index] < h_factor and width[index] < w_factor]
 
-    return screened, w_factor, h_factor
+    return screened
