@@ -269,7 +269,8 @@ def books_from_proposed(
     print("Pulling from open library api:")
     found_books = []
     for _, title in enumerate(tqdm(relevant_titles)):
-        print(title)
+        if verbose:
+            print(title)
         # make a first try
         if title:
             format_title = format_words_open_library(title)
@@ -281,7 +282,8 @@ def books_from_proposed(
             found_books.append(found_title)
         # otherwise generate new possibilities
         else:
-            print(f"alt title for: {title}")
+            if verbose:
+                print(f"alt title for: {title}")
             alt_titles = generate_title_possibilities(title)
             for _, alt_title in enumerate(alt_titles):
                 # should add a compare to title_metric_compare(alt_title)
