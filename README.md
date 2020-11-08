@@ -12,4 +12,4 @@ For now, this project is composed of
 3. [Book detection with PyTorch.](https://github.com/davisrbr/bookRecognition/blob/master/notebooks/PyTorch_Detection.ipynb)
 
 and [a command line script implementing the basic pipeline](https://github.com/davisrbr/bookRecognition/tree/master/booklibrary_draft):
-run with e.g. `python test_script.py /Users/davisbrown/Desktop/SideProjects/bookRecognition/bookshelfs_unlabelled/0024.jpg`
+run with e.g. `python test_script.py bookRecognition/bookshelfs_unlabelled/0024.jpg`
