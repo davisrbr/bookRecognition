@@ -53,7 +53,7 @@ def text_model_inference(
 
 
 # TODO: Define in beginning of set-up/call
-# ... will probably want to make a models set up for image, text, spell
+# i.e. need to make a models set up for image, text, spell
 #############################################
 max_edit = 2
 dictionary_path = pkg_resources.resource_filename(
@@ -246,6 +246,7 @@ def books_from_proposed(
             rotation = 0
             # check goodness of title and number of rotations already performed
             while title_score < 50 and rotation < 3:
+                # rotates and rotation += 1
                 rotated_book, rotation = rotate90(screened_books[index], rotation)
 
                 if display:
