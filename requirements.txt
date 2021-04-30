@@ -121,7 +121,7 @@ QtPy==1.9.0
 regex==2020.10.28
 requests==2.23.0
 requests-oauthlib==1.3.0
-rsa==4.6
+rsa==4.7
 scikit-image==0.17.2
 scipy==1.4.1
 Send2Trash==1.5.0
