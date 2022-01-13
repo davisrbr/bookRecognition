@@ -80,7 +80,7 @@ nbconvert==5.6.1
 nbformat==5.0.6
 networkx==2.4
 notebook==6.4.1
-numpy==1.17.5
+numpy==1.21.0
 oauthlib==3.1.0
 olefile==0.46
 omegaconf==2.0.2
